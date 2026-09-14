@@ -28,7 +28,7 @@ export default function Navbar() {
             <img
               src={logo}
               alt="Acuity logo"
-              className="h-8 w-8 rounded-[5px] object-cover"
+              className="h-8 w-8 rounded-full object-cover"
             />
 
             <span className="text-[17px] font-semibold tracking-tight text-ink">

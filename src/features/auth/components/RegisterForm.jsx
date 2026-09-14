@@ -61,7 +61,7 @@ function RegisterForm() {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Ujjwal Kumar"
+            placeholder="Name"
             className="w-full rounded-[4px] border border-hairline bg-paper px-3.5 py-2.5 text-sm text-ink placeholder:text-slate/60 transition-colors focus:border-focus focus:outline-none focus:ring-2 focus:ring-focus/20"
           />
         </div>
