@@ -1,17 +1,18 @@
+import { Outlet } from "react-router-dom";
+
 import Navbar from "./Navbar";
 import Sidebar from "./Sidebar";
 
-// Wraps every authenticated page: Navbar on top, Sidebar on the left,
-// page content (children, or an <Outlet /> if you're using react-router)
-// scrolls independently on the right.
-export default function DashboardLayout({ children }) {
+export default function DashboardLayout() {
   return (
     <div className="min-h-screen bg-paper">
       <Navbar />
+
       <div className="flex">
         <Sidebar />
-        <main className="flex-1 min-w-0 px-8 py-8">
-          <div className="max-w-6xl mx-auto">{children}</div>
+
+        <main className="min-w-0 flex-1 px-6 py-8 sm:px-8 lg:px-10">
+          <Outlet />
         </main>
       </div>
     </div>

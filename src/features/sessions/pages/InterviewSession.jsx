@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+
 import {
   Clock,
   Mic,
@@ -51,54 +53,120 @@ const questions = [
 ];
 
 export default function InterviewSession() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { id } = useParams();
+
+  const sessionConfig = location.state?.sessionConfig || {
+    role: "Software Engineer",
+    interviewType: "Technical",
+    difficulty: "Intermediate",
+  };
+
   const [answer, setAnswer] = useState("");
   const [questionIndex, setQuestionIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
 
-  const totalQuestions = questions.length;
+  const [answers, setAnswers] = useState([]);
 
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  const totalQuestions = questions.length;
   const questionNumber = questionIndex + 1;
 
   const question = questions[questionIndex];
 
   const progress = (questionNumber / totalQuestions) * 100;
 
+  const isLastQuestion = questionIndex === totalQuestions - 1;
+
+  // Timer
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setElapsedSeconds((previous) => previous + 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatTime = (totalSeconds) => {
+    const minutes = Math.floor(totalSeconds / 60)
+      .toString()
+      .padStart(2, "0");
+
+    const seconds = (totalSeconds % 60)
+      .toString()
+      .padStart(2, "0");
+
+    return `${minutes}:${seconds}`;
+  };
+
   const handleSubmit = async () => {
     if (!answer.trim() || submitting) return;
 
     setSubmitting(true);
 
+    const currentAnswer = {
+      questionId: question.id,
+      question: question.text,
+      answer: answer.trim(),
+    };
+
     try {
-      // Temporary mock AI evaluation
-      // Later:
-      // 1. Send answer to Django backend
-      // 2. AI evaluates the answer
-      // 3. Backend generates the next adaptive question
+      console.log("Submitting answer:", currentAnswer);
 
-      console.log({
-        questionId: question.id,
-        question: question.text,
-        answer,
-      });
+      /*
+        BACKEND FLOW LATER:
 
-      await new Promise((resolve) => setTimeout(resolve, 1200));
+        POST /api/sessions/:id/answer
+
+        {
+          questionId,
+          answer
+        }
+
+        Backend will:
+        1. Evaluate the answer using AI
+        2. Generate feedback
+        3. Generate the next adaptive question
+      */
+
+      // Temporary AI evaluation delay
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      const updatedAnswers = [...answers, currentAnswer];
+
+      setAnswers(updatedAnswers);
 
       setAnswer("");
 
-      if (questionIndex < totalQuestions - 1) {
-        setQuestionIndex((prev) => prev + 1);
+      if (!isLastQuestion) {
+        setQuestionIndex((previous) => previous + 1);
       } else {
         console.log("Interview completed!");
 
-        // Later:
-        // navigate("/sessions/:id/result");
+        navigate(`/sessions/${id}/result`, {
+          state: {
+            sessionConfig,
+            answers: updatedAnswers,
+            duration: elapsedSeconds,
+          },
+        });
       }
     } finally {
       setSubmitting(false);
     }
   };
 
-  const isLastQuestion = questionIndex === totalQuestions - 1;
+  const handleLeaveInterview = () => {
+    const confirmed = window.confirm(
+      "Are you sure you want to leave the interview? Your progress will not be saved."
+    );
+
+    if (confirmed) {
+      navigate("/sessions/create");
+    }
+  };
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -112,6 +180,8 @@ export default function InterviewSession() {
           <div className="flex items-center gap-4">
 
             <button
+              type="button"
+              onClick={handleLeaveInterview}
               className="flex h-9 w-9 items-center justify-center rounded-[4px] border border-hairline text-slate transition-colors hover:border-ink hover:text-ink"
               title="Leave interview"
             >
@@ -119,27 +189,31 @@ export default function InterviewSession() {
             </button>
 
             <div>
+
               <p className="text-sm font-medium text-ink">
-                Software Engineer Interview
+                {sessionConfig.role} Interview
               </p>
 
-              <div className="mt-1.5 flex items-center gap-1.5">
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
 
                 <span className="rounded-[3px] border border-hairline px-1.5 py-0.5 text-xs text-slate">
-                  Technical
+                  {sessionConfig.interviewType}
                 </span>
 
                 <span className="rounded-[3px] border border-hairline px-1.5 py-0.5 text-xs text-slate">
-                  Intermediate
+                  {sessionConfig.difficulty}
                 </span>
 
               </div>
+
             </div>
 
           </div>
 
+
           {/* Right */}
           <button
+            type="button"
             className="text-slate transition-colors hover:text-ink"
             title="More options"
           >
@@ -209,7 +283,7 @@ export default function InterviewSession() {
         {/* Answer section */}
         <div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
 
             <label
               htmlFor="answer"
@@ -230,7 +304,7 @@ export default function InterviewSession() {
             <textarea
               id="answer"
               value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
+              onChange={(event) => setAnswer(event.target.value)}
               disabled={submitting}
               placeholder="Start typing your answer..."
               className="min-h-[220px] w-full resize-none rounded-[4px] border border-hairline bg-paper px-4 py-4 text-sm leading-relaxed text-ink placeholder:text-slate/50 focus:border-focus focus:outline-none focus:ring-2 focus:ring-focus/10 disabled:opacity-60"
@@ -269,7 +343,7 @@ export default function InterviewSession() {
               </p>
 
               <p className="font-mono text-lg font-medium text-ink">
-                01:42
+                {formatTime(elapsedSeconds)}
               </p>
 
             </div>
@@ -279,6 +353,7 @@ export default function InterviewSession() {
 
           {/* Submit */}
           <button
+            type="button"
             onClick={handleSubmit}
             disabled={!answer.trim() || submitting}
             className="inline-flex items-center justify-center gap-2 rounded-[4px] bg-focus px-5 py-2.5 text-sm font-semibold text-paper transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
@@ -290,7 +365,9 @@ export default function InterviewSession() {
               ? "Finish interview"
               : "Submit answer"}
 
-            {!submitting && <Send size={16} />}
+            {!submitting && (
+              <Send size={16} />
+            )}
 
           </button>
 

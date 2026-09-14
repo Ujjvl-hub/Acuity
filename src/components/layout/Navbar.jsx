@@ -1,14 +1,8 @@
 import { useState } from "react";
-import { NavLink, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Flame, Menu, X, ChevronDown } from "lucide-react";
-import logo from "../../assets/logo.jpg";
 
-const NAV_LINKS = [
-  { label: "Dashboard", path: "/dashboard" },
-  { label: "Practice", path: "/sessions/create" },
-  { label: "Resume", path: "/resumes" },
-  { label: "History", path: "/history" },
-];
+import logo from "../../assets/logo.jpg";
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -16,14 +10,14 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-hairline bg-paper">
-      {/* Full-width navbar */}
       <div className="w-full px-6 sm:px-8 lg:px-10">
         <div className="flex h-16 items-center justify-between">
-
+          
           {/* Logo */}
           <Link
             to="/dashboard"
             className="flex shrink-0 items-center gap-2.5"
+            onClick={() => setMobileOpen(false)}
           >
             <img
               src={logo}
@@ -36,36 +30,9 @@ export default function Navbar() {
             </span>
           </Link>
 
-          {/* Desktop navigation */}
-          <nav className="hidden items-center gap-1 md:flex">
-            {NAV_LINKS.map((link) => (
-              <NavLink
-                key={link.path}
-                to={link.path}
-                className={({ isActive }) =>
-                  `relative px-4 py-2 text-sm font-medium transition-colors ${
-                    isActive
-                      ? "text-ink"
-                      : "text-slate hover:text-ink"
-                  }`
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    {link.label}
-
-                    {isActive && (
-                      <span className="absolute bottom-0 left-4 right-4 h-[2px] rounded-full bg-focus" />
-                    )}
-                  </>
-                )}
-              </NavLink>
-            ))}
-          </nav>
-
-          {/* Right side */}
+          {/* Desktop actions */}
           <div className="hidden items-center gap-4 md:flex">
-
+            
             {/* Streak */}
             <div className="flex items-center gap-1.5 rounded-[4px] border border-brass/30 bg-brass/10 px-3 py-1.5">
               <Flame
@@ -87,11 +54,14 @@ export default function Navbar() {
               Start session
             </Link>
 
-            {/* Avatar */}
+            {/* Profile */}
             <div className="relative">
               <button
-                onClick={() => setAvatarOpen((v) => !v)}
+                type="button"
+                onClick={() => setAvatarOpen((prev) => !prev)}
                 className="flex items-center gap-1.5 rounded-[4px] py-1 pl-1 pr-2 transition-colors hover:bg-ink/5"
+                aria-label="Open profile menu"
+                aria-expanded={avatarOpen}
               >
                 <div className="flex h-7 w-7 items-center justify-center rounded-full bg-ink">
                   <span className="text-xs font-semibold text-paper">
@@ -99,22 +69,20 @@ export default function Navbar() {
                   </span>
                 </div>
 
-                <ChevronDown size={14} className="text-slate" />
+                <ChevronDown
+                  size={14}
+                  className={`text-slate transition-transform ${
+                    avatarOpen ? "rotate-180" : ""
+                  }`}
+                />
               </button>
 
               {avatarOpen && (
                 <div className="absolute right-0 mt-2 w-44 rounded-[4px] border border-hairline bg-paper py-1 shadow-lg">
-
-                  <Link
-                    to="/profile"
-                    className="block px-3 py-2 text-sm text-ink hover:bg-ink/5"
-                  >
-                    Your profile
-                  </Link>
-
                   <Link
                     to="/settings"
-                    className="block px-3 py-2 text-sm text-ink hover:bg-ink/5"
+                    onClick={() => setAvatarOpen(false)}
+                    className="block px-3 py-2 text-sm text-ink transition-colors hover:bg-ink/5"
                   >
                     Settings
                   </Link>
@@ -122,54 +90,36 @@ export default function Navbar() {
                   <div className="my-1 border-t border-hairline" />
 
                   <button
-                    className="block w-full px-3 py-2 text-left text-sm text-ink hover:bg-ink/5"
+                    type="button"
+                    className="block w-full px-3 py-2 text-left text-sm text-ink transition-colors hover:bg-ink/5"
                   >
                     Sign out
                   </button>
-
                 </div>
               )}
             </div>
           </div>
 
-          {/* Mobile toggle */}
+          {/* Mobile menu button */}
           <button
+            type="button"
             className="text-ink md:hidden"
-            onClick={() => setMobileOpen((v) => !v)}
+            onClick={() => setMobileOpen((prev) => !prev)}
             aria-label="Toggle navigation"
+            aria-expanded={mobileOpen}
           >
             {mobileOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
-
         </div>
       </div>
 
       {/* Mobile menu */}
       {mobileOpen && (
         <div className="border-t border-hairline px-6 py-4 md:hidden">
-
-          <nav className="space-y-1">
-            {NAV_LINKS.map((link) => (
-              <NavLink
-                key={link.path}
-                to={link.path}
-                onClick={() => setMobileOpen(false)}
-                className={({ isActive }) =>
-                  `block w-full rounded-[4px] px-3 py-2 text-sm font-medium ${
-                    isActive
-                      ? "bg-focus/10 text-focus"
-                      : "text-slate hover:bg-ink/5"
-                  }`
-                }
-              >
-                {link.label}
-              </NavLink>
-            ))}
-          </nav>
-
-          <div className="mt-3 flex items-center justify-between border-t border-hairline pt-3">
-
-            <div className="flex items-center gap-1.5 rounded-[4px] border border-brass/30 bg-brass/10 px-3 py-1.5">
+          <div className="flex flex-col gap-3">
+            
+            {/* Streak */}
+            <div className="flex items-center gap-1.5 rounded-[4px] border border-brass/30 bg-brass/10 px-3 py-2">
               <Flame
                 size={15}
                 className="text-brass"
@@ -181,14 +131,23 @@ export default function Navbar() {
               </span>
             </div>
 
+            {/* Start session */}
             <Link
               to="/sessions/create"
               onClick={() => setMobileOpen(false)}
-              className="rounded-[4px] bg-focus px-4 py-2 text-sm font-semibold text-paper"
+              className="rounded-[4px] bg-focus px-4 py-2.5 text-center text-sm font-semibold text-paper"
             >
               Start session
             </Link>
 
+            {/* Settings */}
+            <Link
+              to="/settings"
+              onClick={() => setMobileOpen(false)}
+              className="rounded-[4px] border border-hairline px-4 py-2.5 text-center text-sm font-medium text-ink hover:bg-ink/5"
+            >
+              Settings
+            </Link>
           </div>
         </div>
       )}

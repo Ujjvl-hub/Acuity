@@ -7,13 +7,16 @@ function RegisterForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     setError("");
 
     if (!name || !email || !password || !confirmPassword) {
@@ -34,12 +37,45 @@ function RegisterForm() {
     setLoading(true);
 
     try {
-      // Temporary mock registration
-      // We will connect the real backend later
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      console.log("Mock registration:", { name, email });
+      const response = await fetch(
+        "http://127.0.0.1:8000/api/users/register/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            username: name,
+            email: email,
+            password: password,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(
+          data.message ||
+          data.error ||
+          "Couldn't create your account. Please try again."
+        );
+        return;
+      }
+
+      console.log("Registration successful:", data);
+
+      setName("");
+      setEmail("");
+      setPassword("");
+      setConfirmPassword("");
+
+      alert("Account created successfully!");
+
     } catch (err) {
-      setError("Couldn't create your account. Please try again.");
+      console.error(err);
+      setError("Unable to connect to the server.");
+
     } finally {
       setLoading(false);
     }
@@ -47,45 +83,63 @@ function RegisterForm() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-ink">Create your account</h1>
-      <p className="mt-1.5 text-sm text-slate">Start practicing in a few minutes.</p>
+      <h1 className="text-2xl font-semibold text-ink">
+        Create your account
+      </h1>
+
+      <p className="mt-1.5 text-sm text-slate">
+        Start practicing in a few minutes.
+      </p>
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+
         {/* Full Name */}
         <div>
-          <label htmlFor="name" className="mb-1.5 block text-sm font-medium text-ink">
+          <label
+            htmlFor="name"
+            className="mb-1.5 block text-sm font-medium text-ink"
+          >
             Full name
           </label>
+
           <input
             id="name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Name"
-            className="w-full rounded-[4px] border border-hairline bg-paper px-3.5 py-2.5 text-sm text-ink placeholder:text-slate/60 transition-colors focus:border-focus focus:outline-none focus:ring-2 focus:ring-focus/20"
+            className="w-full rounded border px-3 py-2"
           />
         </div>
 
         {/* Email */}
         <div>
-          <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-ink">
+          <label
+            htmlFor="email"
+            className="mb-1.5 block text-sm font-medium text-ink"
+          >
             Email
           </label>
+
           <input
             id="email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
-            className="w-full rounded-[4px] border border-hairline bg-paper px-3.5 py-2.5 text-sm text-ink placeholder:text-slate/60 transition-colors focus:border-focus focus:outline-none focus:ring-2 focus:ring-focus/20"
+            className="w-full rounded border px-3 py-2"
           />
         </div>
 
         {/* Password */}
         <div>
-          <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-ink">
+          <label
+            htmlFor="password"
+            className="mb-1.5 block text-sm font-medium text-ink"
+          >
             Password
           </label>
+
           <div className="relative">
             <input
               id="password"
@@ -93,13 +147,12 @@ function RegisterForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Create a password"
-              className="w-full rounded-[4px] border border-hairline bg-paper px-3.5 py-2.5 pr-10 text-sm text-ink placeholder:text-slate/60 transition-colors focus:border-focus focus:outline-none focus:ring-2 focus:ring-focus/20"
+              className="w-full rounded border px-3 py-2"
             />
+
             <button
               type="button"
-              onClick={() => setShowPassword((value) => !value)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate hover:text-ink"
-              aria-label="Toggle password visibility"
+              onClick={() => setShowPassword(!showPassword)}
             >
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
@@ -108,32 +161,43 @@ function RegisterForm() {
 
         {/* Confirm Password */}
         <div>
-          <label htmlFor="confirmPassword" className="mb-1.5 block text-sm font-medium text-ink">
+          <label
+            htmlFor="confirmPassword"
+            className="mb-1.5 block text-sm font-medium text-ink"
+          >
             Confirm password
           </label>
+
           <div className="relative">
             <input
               id="confirmPassword"
               type={showConfirmPassword ? "text" : "password"}
               value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              onChange={(e) =>
+                setConfirmPassword(e.target.value)
+              }
               placeholder="Confirm your password"
-              className="w-full rounded-[4px] border border-hairline bg-paper px-3.5 py-2.5 pr-10 text-sm text-ink placeholder:text-slate/60 transition-colors focus:border-focus focus:outline-none focus:ring-2 focus:ring-focus/20"
+              className="w-full rounded border px-3 py-2"
             />
+
             <button
               type="button"
-              onClick={() => setShowConfirmPassword((value) => !value)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate hover:text-ink"
-              aria-label="Toggle confirm password visibility"
+              onClick={() =>
+                setShowConfirmPassword(!showConfirmPassword)
+              }
             >
-              {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              {showConfirmPassword ? (
+                <EyeOff size={16} />
+              ) : (
+                <Eye size={16} />
+              )}
             </button>
           </div>
         </div>
 
         {/* Error */}
         {error && (
-          <p className="rounded-[4px] border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+          <p className="text-sm text-red-600">
             {error}
           </p>
         )}
@@ -142,16 +206,22 @@ function RegisterForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-[4px] bg-focus py-2.5 text-sm font-semibold text-paper transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded bg-blue-600 py-2 text-white"
         >
-          {loading ? "Creating account..." : "Create account"}
+          {loading
+            ? "Creating account..."
+            : "Create account"}
         </button>
+
       </form>
 
-      {/* Login link */}
-      <p className="mt-6 text-sm text-slate">
+      <p className="mt-6 text-sm">
         Already have an account?{" "}
-        <Link to="/login" className="font-medium text-focus hover:opacity-80">
+
+        <Link
+          to="/login"
+          className="font-medium text-blue-600"
+        >
           Sign in
         </Link>
       </p>
