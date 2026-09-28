@@ -10,6 +10,7 @@ dependencies = [
     "djangorestframework>=3.18.1",
     "djangorestframework-simplejwt>=5.5.1",
     "groq>=0.37.1",
+    "gunicorn>=26.2.0",
     "httpx>=0.28.1",
     "langchain>=1.4.2",
     "langchain-community>=0.4.2",
