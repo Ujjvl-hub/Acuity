@@ -1,7 +1,9 @@
+
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import useAuth from "../../../hooks/useAuth.js";
+import api from "../../../api/axios";
 
 function LoginForm() {
   const navigate = useNavigate();
@@ -17,7 +19,7 @@ function LoginForm() {
     e.preventDefault();
     setError("");
 
-    if (!email || !password) {
+    if (!email.trim() || !password) {
       setError("Enter your email and password to continue.");
       return;
     }
@@ -25,55 +27,45 @@ function LoginForm() {
     setLoading(true);
 
     try {
-      const response = await fetch(
-        "http://127.0.0.1:8000/api/users/login/",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: email,
-            password: password,
-          }),
-        }
-      );
+      const response = await api.post("/api/users/login/", {
+        email: email.trim(),
+        password,
+      });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(
-          data.message ||
-            data.error ||
-            "Couldn't sign you in. Check your details and try again."
-        );
-        return;
-      }
+      const data = response.data;
 
       console.log("Login successful:", data);
 
-      console.log(
-        "Current origin:",
-        window.location.origin
-      );
-
       // Save user and JWT tokens
       login(data.user, data.tokens);
+
       // Go to dashboard
       navigate("/dashboard");
     } catch (err) {
-      console.error("Login error:", err);
-      setError("Unable to connect to the server.");
+      console.error(
+        "Login error:",
+        err.response?.data || err.message
+      );
+
+      if (err.response) {
+        const data = err.response.data || {};
+
+        setError(
+          data.message ||
+            data.error ||
+            data.detail ||
+            "Couldn't sign you in. Check your details and try again."
+        );
+      } else {
+        setError("Unable to connect to the server.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-5"
-    >
+    <form onSubmit={handleSubmit} className="space-y-5">
       {/* Email */}
       <div>
         <label
@@ -82,13 +74,14 @@ function LoginForm() {
         >
           Email
         </label>
-
         <input
           id="email"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@example.com"
+          autoComplete="email"
+          required
           className="w-full rounded-xl border border-[#DDE1E6] bg-white px-4 py-3 text-sm text-[#12151C] outline-none transition focus:border-[#1F7A5C] focus:ring-2 focus:ring-[#1F7A5C]/10"
         />
       </div>
@@ -102,7 +95,6 @@ function LoginForm() {
           >
             Password
           </label>
-
           <button
             type="button"
             className="text-xs font-medium text-[#5B6472] transition hover:text-[#1F7A5C]"
@@ -118,14 +110,14 @@ function LoginForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Enter your password"
+            autoComplete="current-password"
+            required
             className="w-full rounded-xl border border-[#DDE1E6] bg-white px-4 py-3 pr-11 text-sm text-[#12151C] outline-none transition focus:border-[#1F7A5C] focus:ring-2 focus:ring-[#1F7A5C]/10"
           />
-
           <button
             type="button"
-            onClick={() =>
-              setShowPassword((prev) => !prev)
-            }
+            onClick={() => setShowPassword((prev) => !prev)}
+            aria-label={showPassword ? "Hide password" : "Show password"}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5B6472] hover:text-[#12151C]"
           >
             {showPassword ? (
@@ -139,7 +131,11 @@ function LoginForm() {
 
       {/* Error */}
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+        <div
+          role="alert"
+          aria-live="polite"
+          className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600"
+        >
           {error}
         </div>
       )}
