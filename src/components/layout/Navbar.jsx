@@ -1,19 +1,46 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Flame, Menu, X, ChevronDown } from "lucide-react";
 
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  Flame,
+  Menu,
+  X,
+  ChevronDown,
+  LogOut,
+  Settings,
+} from "lucide-react";
+import useAuth from "../../hooks/useAuth.js";
 import logo from "../../assets/logo.jpg";
 
-export default function Navbar() {
+
+export default function Navbar({ currentStreak = 0 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+
+  const username = user?.username || "User";
+  const email = user?.email || "";
+  const initials =
+    username
+      .split(" ")
+      .map((word) => word[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "U";
+
+  const handleLogout = () => {
+    logout();
+    setAvatarOpen(false);
+    setMobileOpen(false);
+    navigate("/login");
+  };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-hairline bg-paper">
-      <div className="w-full px-6 sm:px-8 lg:px-10">
-        <div className="flex h-16 items-center justify-between">
-          
-          {/* Logo */}
+    <header className="sticky top-0 z-50 border-b border-[#30343B] bg-[#17191B]">
+      <div className="mx-auto w-full px-4 sm:px-6 lg:px-8">
+        <div className="flex h-[68px] items-center justify-between">
+          {/* Brand */}
           <Link
             to="/dashboard"
             className="flex shrink-0 items-center gap-2.5"
@@ -22,77 +49,89 @@ export default function Navbar() {
             <img
               src={logo}
               alt="Acuity logo"
-              className="h-8 w-8 rounded-full object-cover"
+              className="h-9 w-9 rounded-xl object-cover shadow-sm"
             />
-
-            <span className="text-[17px] font-semibold tracking-tight text-ink">
-              Acuity
+            <span className="text-xl font-bold tracking-tight text-white">
+              Acuity<span className="text-blue-500">.</span>
             </span>
           </Link>
 
           {/* Desktop actions */}
-          <div className="hidden items-center gap-4 md:flex">
-            
-            {/* Streak */}
-            <div className="flex items-center gap-1.5 rounded-[4px] border border-brass/30 bg-brass/10 px-3 py-1.5">
+          <div className="hidden items-center gap-3 md:flex">
+            <div className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-2">
               <Flame
-                size={15}
-                className="text-brass"
-                strokeWidth={2.5}
+                size={17}
+                className="text-amber-400"
+                strokeWidth={2.3}
               />
-
-              <span className="text-sm font-semibold text-ink">
-                6 day streak
+              <span className="text-sm font-semibold text-gray-200">
+                {currentStreak} day streak
               </span>
             </div>
 
-            {/* Start session */}
             <Link
               to="/sessions/create"
-              className="rounded-[4px] bg-focus px-4 py-2 text-sm font-semibold text-paper transition-opacity hover:opacity-90"
+              className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-md"
             >
               Start session
             </Link>
 
-            {/* Profile */}
-            <div className="relative">
+            {/* Profile menu */}
+            <div className="relative ml-1">
               <button
                 type="button"
                 onClick={() => setAvatarOpen((prev) => !prev)}
-                className="flex items-center gap-1.5 rounded-[4px] py-1 pl-1 pr-2 transition-colors hover:bg-ink/5"
+                className={`flex items-center gap-2 rounded-xl border px-2 py-1.5 transition-colors ${
+                  avatarOpen
+                    ? "border-slate-600 bg-slate-800"
+                    : "border-transparent hover:border-slate-700 hover:bg-slate-800"
+                }`}
                 aria-label="Open profile menu"
                 aria-expanded={avatarOpen}
+                aria-haspopup="menu"
               >
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-ink">
-                  <span className="text-xs font-semibold text-paper">
-                    UK
-                  </span>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#192440] text-xs font-semibold text-white">
+                  {initials}
                 </div>
-
                 <ChevronDown
-                  size={14}
-                  className={`text-slate transition-transform ${
+                  size={15}
+                  className={`text-gray-400 transition-transform duration-200 ${
                     avatarOpen ? "rotate-180" : ""
                   }`}
                 />
               </button>
 
               {avatarOpen && (
-                <div className="absolute right-0 mt-2 w-44 rounded-[4px] border border-hairline bg-paper py-1 shadow-lg">
+                <div
+                  role="menu"
+                  className="absolute right-0 mt-3 w-60 overflow-hidden rounded-2xl border border-slate-700 bg-[#202329] py-1.5 shadow-xl shadow-black/30"
+                >
+                  <div className="border-b border-slate-700 px-4 py-3">
+                    <p className="truncate text-sm font-semibold text-white">
+                      {username}
+                    </p>
+                    <p className="mt-0.5 truncate text-xs text-gray-400">
+                      {email}
+                    </p>
+                  </div>
+
                   <Link
                     to="/settings"
+                    role="menuitem"
                     onClick={() => setAvatarOpen(false)}
-                    className="block px-3 py-2 text-sm text-ink transition-colors hover:bg-ink/5"
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-300 transition-colors hover:bg-slate-800 hover:text-white"
                   >
+                    <Settings size={16} />
                     Settings
                   </Link>
 
-                  <div className="my-1 border-t border-hairline" />
-
                   <button
                     type="button"
-                    className="block w-full px-3 py-2 text-left text-sm text-ink transition-colors hover:bg-ink/5"
+                    role="menuitem"
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-red-400 transition-colors hover:bg-red-500/10"
                   >
+                    <LogOut size={16} />
                     Sign out
                   </button>
                 </div>
@@ -103,51 +142,68 @@ export default function Navbar() {
           {/* Mobile menu button */}
           <button
             type="button"
-            className="text-ink md:hidden"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-700 text-gray-200 transition-colors hover:bg-slate-800 md:hidden"
             onClick={() => setMobileOpen((prev) => !prev)}
-            aria-label="Toggle navigation"
+            aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
             aria-expanded={mobileOpen}
           >
-            {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+            {mobileOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
       </div>
 
-      {/* Mobile menu */}
+      {/* Mobile navigation */}
       {mobileOpen && (
-        <div className="border-t border-hairline px-6 py-4 md:hidden">
+        <div className="border-t border-slate-700 bg-[#17191B] px-4 py-4 sm:px-6 md:hidden">
           <div className="flex flex-col gap-3">
-            
-            {/* Streak */}
-            <div className="flex items-center gap-1.5 rounded-[4px] border border-brass/30 bg-brass/10 px-3 py-2">
-              <Flame
-                size={15}
-                className="text-brass"
-                strokeWidth={2.5}
-              />
+            <div className="flex items-center gap-3 rounded-xl border border-slate-700 bg-[#202329] p-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#192440] text-sm font-semibold text-white">
+                {initials}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-white">
+                  {username}
+                </p>
+                <p className="truncate text-xs text-gray-400">{email}</p>
+              </div>
+            </div>
 
-              <span className="text-sm font-semibold text-ink">
-                6 day streak
+            <div className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-2.5">
+              <Flame
+                size={17}
+                className="text-amber-400"
+                strokeWidth={2.3}
+              />
+              <span className="text-sm font-semibold text-gray-200">
+                {currentStreak} day streak
               </span>
             </div>
 
-            {/* Start session */}
             <Link
               to="/sessions/create"
               onClick={() => setMobileOpen(false)}
-              className="rounded-[4px] bg-focus px-4 py-2.5 text-center text-sm font-semibold text-paper"
+              className="flex min-h-11 items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
             >
               Start session
             </Link>
 
-            {/* Settings */}
             <Link
               to="/settings"
               onClick={() => setMobileOpen(false)}
-              className="rounded-[4px] border border-hairline px-4 py-2.5 text-center text-sm font-medium text-ink hover:bg-ink/5"
+              className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-2.5 text-sm font-medium text-gray-200 transition-colors hover:bg-slate-800"
             >
+              <Settings size={16} />
               Settings
             </Link>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-red-500/30 px-4 py-2.5 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/10"
+            >
+              <LogOut size={16} />
+              Sign out
+            </button>
           </div>
         </div>
       )}

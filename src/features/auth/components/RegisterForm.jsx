@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 
 function RegisterForm() {
+  const navigate = useNavigate();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -71,6 +72,7 @@ function RegisterForm() {
       setConfirmPassword("");
 
       alert("Account created successfully!");
+      navigate("/login");
 
     } catch (err) {
       console.error(err);

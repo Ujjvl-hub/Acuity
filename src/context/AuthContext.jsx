@@ -10,20 +10,46 @@ function AuthProvider({ children }) {
     const storedUser = localStorage.getItem("user");
 
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (error) {
+        console.error("Failed to restore user:", error);
+        localStorage.removeItem("user");
+      }
     }
 
     setLoading(false);
   }, []);
 
-  const login = (userData) => {
-    localStorage.setItem("user", JSON.stringify(userData));
+  const login = (userData, tokens = null) => {
+    // Save user
+    localStorage.setItem(
+      "user",
+      JSON.stringify(userData)
+    );
+
+    // Save JWT tokens
+    if (tokens?.access) {
+      localStorage.setItem(
+        "access_token",
+        tokens.access
+      );
+    }
+
+    if (tokens?.refresh) {
+      localStorage.setItem(
+        "refresh_token",
+        tokens.refresh
+      );
+    }
 
     setUser(userData);
   };
 
   const logout = () => {
     localStorage.removeItem("user");
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
 
     setUser(null);
   };

@@ -1,5 +1,6 @@
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from rest_framework import status
 from rest_framework.views import APIView
@@ -44,7 +45,6 @@ class LoginView(APIView):
         password = request.data.get("password")
 
         if not email or not password:
-
             return Response(
                 {
                     "error": "Email and password are required"
@@ -53,11 +53,8 @@ class LoginView(APIView):
             )
 
         try:
-
             user = User.objects.get(email=email)
-
         except User.DoesNotExist:
-
             return Response(
                 {
                     "error": "Invalid email or password"
@@ -72,13 +69,21 @@ class LoginView(APIView):
 
         if user is not None:
 
+            refresh = RefreshToken.for_user(user)
+
             return Response(
                 {
                     "message": "Login successful",
+
                     "user": {
                         "id": user.id,
                         "username": user.username,
                         "email": user.email,
+                    },
+
+                    "tokens": {
+                        "refresh": str(refresh),
+                        "access": str(refresh.access_token),
                     },
                 },
                 status=status.HTTP_200_OK,

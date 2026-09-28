@@ -9,16 +9,12 @@ function LoginForm() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   const [showPassword, setShowPassword] = useState(false);
-
   const [loading, setLoading] = useState(false);
-
   const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     setError("");
 
     if (!email || !password) {
@@ -33,11 +29,9 @@ function LoginForm() {
         "http://127.0.0.1:8000/api/users/login/",
         {
           method: "POST",
-
           headers: {
             "Content-Type": "application/json",
           },
-
           body: JSON.stringify({
             email: email,
             password: password,
@@ -53,156 +47,123 @@ function LoginForm() {
             data.error ||
             "Couldn't sign you in. Check your details and try again."
         );
-
         return;
       }
 
       console.log("Login successful:", data);
 
-      login(data.user);
+      console.log(
+        "Current origin:",
+        window.location.origin
+      );
 
+      // Save user and JWT tokens
+      login(data.user, data.tokens);
+      // Go to dashboard
       navigate("/dashboard");
-
     } catch (err) {
-      console.error(err);
-
+      console.error("Login error:", err);
       setError("Unable to connect to the server.");
-
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div>
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-5"
+    >
+      {/* Email */}
+      <div>
+        <label
+          htmlFor="email"
+          className="mb-2 block text-sm font-medium text-[#12151C]"
+        >
+          Email
+        </label>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+        <input
+          id="email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@example.com"
+          className="w-full rounded-xl border border-[#DDE1E6] bg-white px-4 py-3 text-sm text-[#12151C] outline-none transition focus:border-[#1F7A5C] focus:ring-2 focus:ring-[#1F7A5C]/10"
+        />
+      </div>
 
-        {/* Email */}
-
-        <div>
-
+      {/* Password */}
+      <div>
+        <div className="mb-2 flex items-center justify-between">
           <label
-            htmlFor="email"
-            className="mb-1.5 block text-sm font-medium text-ink"
+            htmlFor="password"
+            className="block text-sm font-medium text-[#12151C]"
           >
-            Email
+            Password
           </label>
 
+          <button
+            type="button"
+            className="text-xs font-medium text-[#5B6472] transition hover:text-[#1F7A5C]"
+          >
+            Forgot password?
+          </button>
+        </div>
+
+        <div className="relative">
           <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            className="w-full rounded-[4px] border border-hairline bg-paper px-3.5 py-2.5 text-sm text-ink placeholder:text-slate/60 transition-colors focus:border-focus focus:outline-none focus:ring-2 focus:ring-focus/20"
+            id="password"
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter your password"
+            className="w-full rounded-xl border border-[#DDE1E6] bg-white px-4 py-3 pr-11 text-sm text-[#12151C] outline-none transition focus:border-[#1F7A5C] focus:ring-2 focus:ring-[#1F7A5C]/10"
           />
 
+          <button
+            type="button"
+            onClick={() =>
+              setShowPassword((prev) => !prev)
+            }
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5B6472] hover:text-[#12151C]"
+          >
+            {showPassword ? (
+              <EyeOff size={18} />
+            ) : (
+              <Eye size={18} />
+            )}
+          </button>
         </div>
+      </div>
 
-
-        {/* Password */}
-
-        <div>
-
-          <div className="mb-1.5 flex items-center justify-between">
-
-            <label
-              htmlFor="password"
-              className="text-sm font-medium text-ink"
-            >
-              Password
-            </label>
-
-
-            <button
-              type="button"
-              className="text-sm text-focus transition-opacity hover:opacity-80"
-            >
-              Forgot password?
-            </button>
-
-          </div>
-
-
-          <div className="relative">
-
-            <input
-              id="password"
-              type={showPassword ? "text" : "password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
-              className="w-full rounded-[4px] border border-hairline bg-paper px-3.5 py-2.5 pr-10 text-sm text-ink placeholder:text-slate/60 transition-colors focus:border-focus focus:outline-none focus:ring-2 focus:ring-focus/20"
-            />
-
-
-            <button
-              type="button"
-              onClick={() => setShowPassword((value) => !value)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate transition-colors hover:text-ink"
-              aria-label={
-                showPassword ? "Hide password" : "Show password"
-              }
-            >
-
-              {showPassword ? (
-                <EyeOff size={16} />
-              ) : (
-                <Eye size={16} />
-              )}
-
-            </button>
-
-          </div>
-
+      {/* Error */}
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+          {error}
         </div>
+      )}
 
+      {/* Submit */}
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full rounded-xl bg-[#12151C] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#1F7A5C] disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {loading ? "Signing in..." : "Sign in"}
+      </button>
 
-        {/* Error */}
-
-        {error && (
-
-          <p className="rounded-[4px] border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
-
-            {error}
-
-          </p>
-
-        )}
-
-
-        {/* Submit button */}
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-[4px] bg-focus py-2.5 text-sm font-semibold text-paper transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-
-          {loading ? "Signing in..." : "Sign in"}
-
-        </button>
-
-      </form>
-
-
-      {/* Register link */}
-
-      <p className="mt-6 text-sm text-slate">
-
-        New to Acuity?{" "}
-
+      {/* Register */}
+      <p className="text-center text-sm text-[#5B6472]">
+        Don't have an account?{" "}
         <Link
           to="/register"
-          className="font-medium text-focus transition-opacity hover:opacity-80"
+          className="font-semibold text-[#1F7A5C] hover:underline"
         >
-          Create an account
+          Create account
         </Link>
-
       </p>
-
-    </div>
+    </form>
   );
 }
 

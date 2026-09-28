@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check, ArrowRight } from "lucide-react";
+import useAuth from "../../../hooks/useAuth.js";
+import { createSession } from "../../../api/session.api.js";
 
 const roles = [
   "Software Engineer",
@@ -45,57 +47,102 @@ const difficulties = [
   },
 ];
 
+const difficultyMap = {
+  Beginner: "Easy",
+  Intermediate: "Medium",
+  Advanced: "Hard",
+};
+
 export default function CreateSession() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [role, setRole] = useState("");
   const [interviewType, setInterviewType] = useState("");
   const [difficulty, setDifficulty] = useState("");
 
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
   const isReady = role && interviewType && difficulty;
 
-  const handleStart = () => {
-    if (!isReady) return;
+  const handleStart = async () => {
+    if (!isReady || !user?.id) {
+      setError("Please log in before starting an interview.");
+      return;
+    }
 
-    // Temporary frontend session ID
-    // Backend will generate the real ID later
-    const sessionId = Date.now();
+    setLoading(true);
+    setError("");
 
     const sessionConfig = {
       role,
-      interviewType,
-      difficulty,
+      difficulty: difficultyMap[difficulty],
+      interview_type: interviewType,
     };
 
-    console.log("Starting interview:", sessionConfig);
+    try {
+      const response = await createSession(sessionConfig);
 
-    navigate(`/sessions/${sessionId}`, {
-      state: {
-        sessionConfig,
-      },
-    });
+      const createdSession = response.data.session;
+
+      console.log(
+        "Interview session created:",
+        createdSession
+      );
+
+      navigate(`/sessions/${createdSession.id}`, {
+        state: {
+          sessionConfig: {
+            role,
+            interviewType,
+            difficulty,
+          },
+        },
+      });
+    } catch (err) {
+      console.error(
+        "Session creation failed:",
+        err
+      );
+
+      if (err.response?.status === 401) {
+        setError(
+          "Your session has expired. Please log in again."
+        );
+      } else {
+        setError(
+          err.response?.data?.error ||
+            "Unable to create interview session. Please try again."
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="mx-auto max-w-4xl">
       {/* Header */}
       <section className="border-b border-hairline pb-8">
-        <p className="text-sm text-slate">Interview practice</p>
+        <p className="text-sm text-slate">
+          Interview practice
+        </p>
 
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
           Configure your interview.
         </h1>
 
         <p className="mt-3 max-w-xl leading-relaxed text-slate">
-          Choose what you want to practice. Acuity will adapt the interview
-          based on your selections and performance.
+          Choose what you want to practice. Acuity will
+          adapt the interview based on your selections
+          and performance.
         </p>
       </section>
 
       {/* Configuration */}
       <div className="space-y-10 py-10">
-
-        {/* Target role */}
+        {/* Target Role */}
         <section>
           <div className="flex items-baseline gap-3">
             <span className="font-mono text-sm text-brass">
@@ -142,8 +189,7 @@ export default function CreateSession() {
           </div>
         </section>
 
-
-        {/* Interview type */}
+        {/* Interview Type */}
         <section className="border-t border-hairline pt-10">
           <div className="flex items-baseline gap-3">
             <span className="font-mono text-sm text-brass">
@@ -156,18 +202,22 @@ export default function CreateSession() {
           </div>
 
           <p className="mt-2 text-sm text-slate">
-            Choose the kind of interview you want to simulate.
+            Choose the kind of interview you want to
+            simulate.
           </p>
 
           <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
             {interviewTypes.map((item) => {
-              const selected = interviewType === item.name;
+              const selected =
+                interviewType === item.name;
 
               return (
                 <button
                   key={item.name}
                   type="button"
-                  onClick={() => setInterviewType(item.name)}
+                  onClick={() =>
+                    setInterviewType(item.name)
+                  }
                   className={`relative rounded-[4px] border p-5 text-left transition-colors ${
                     selected
                       ? "border-focus bg-focus/5"
@@ -194,7 +244,6 @@ export default function CreateSession() {
           </div>
         </section>
 
-
         {/* Difficulty */}
         <section className="border-t border-hairline pt-10">
           <div className="flex items-baseline gap-3">
@@ -208,19 +257,22 @@ export default function CreateSession() {
           </div>
 
           <p className="mt-2 text-sm text-slate">
-            Acuity will use this as the starting point and adapt as you
-            progress.
+            Acuity will use this as the starting point
+            and adapt as you progress.
           </p>
 
           <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
             {difficulties.map((item) => {
-              const selected = difficulty === item.name;
+              const selected =
+                difficulty === item.name;
 
               return (
                 <button
                   key={item.name}
                   type="button"
-                  onClick={() => setDifficulty(item.name)}
+                  onClick={() =>
+                    setDifficulty(item.name)
+                  }
                   className={`relative rounded-[4px] border p-5 text-left transition-colors ${
                     selected
                       ? "border-focus bg-focus/5"
@@ -248,8 +300,7 @@ export default function CreateSession() {
         </section>
       </div>
 
-
-      {/* Selected configuration */}
+      {/* Selected Configuration */}
       {isReady && (
         <section className="border-t border-hairline py-6">
           <p className="text-sm text-slate">
@@ -272,8 +323,14 @@ export default function CreateSession() {
         </section>
       )}
 
+      {/* Error Message */}
+      {error && (
+        <p className="mb-4 rounded-[4px] border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-600">
+          {error}
+        </p>
+      )}
 
-      {/* Start section */}
+      {/* Start Section */}
       <section className="flex flex-col gap-5 border-t border-hairline pt-8 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm font-medium text-ink">
@@ -281,19 +338,22 @@ export default function CreateSession() {
           </p>
 
           <p className="mt-1 text-sm text-slate">
-            Select all three options to begin your interview.
+            Select all three options to begin your
+            interview.
           </p>
         </div>
 
         <button
           type="button"
-          disabled={!isReady}
+          disabled={!isReady || loading}
           onClick={handleStart}
           className="inline-flex items-center justify-center gap-2 rounded-[4px] bg-focus px-5 py-2.5 text-sm font-semibold text-paper transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Start interview
+          {loading
+            ? "Creating session..."
+            : "Start interview"}
 
-          <ArrowRight size={16} />
+          {!loading && <ArrowRight size={16} />}
         </button>
       </section>
     </div>
