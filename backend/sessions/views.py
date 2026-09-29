@@ -1,15 +1,21 @@
 
 from django.db import IntegrityError, transaction
-from django.db.models import Avg
+from django.db.models import Avg, Q
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 
-from .models import InterviewSession, InterviewAnswer
+from .models import (
+    InterviewSession,
+    InterviewAnswer,
+    QuestionBankItem,
+)
 from .serializers import (
     InterviewSessionSerializer,
     InterviewAnswerSerializer,
+    QuestionBankItemSerializer,
 )
 from ai.services import evaluate_answer, AIServiceError
 from ai.question_services import (
@@ -31,36 +37,65 @@ class InterviewSessionView(APIView):
             )
 
         data = serializer.validated_data
+        question_bank_id = request.data.get("question_id")
 
-        # Collect questions from the user's recent matching interviews.
-        previous_sessions = (
-            InterviewSession.objects.filter(
-                user=request.user,
-                role=data["role"],
-                interview_type=data["interview_type"],
-                difficulty=data["difficulty"],
-            )
-            .order_by("-created_at")[:20]
-        )
+        if question_bank_id is not None:
+            if isinstance(question_bank_id, bool):
+                return Response(
+                    {"error": "Invalid question ID."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
-        previous_questions = [
-            question
-            for previous_session in previous_sessions
-            for question in (previous_session.questions or [])
-        ]
+            try:
+                question_bank_id = int(question_bank_id)
+            except (TypeError, ValueError):
+                return Response(
+                    {"error": "Invalid question ID."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
-        try:
-            questions = generate_questions(
-                role=data["role"],
-                interview_type=data["interview_type"],
-                difficulty=data["difficulty"],
-                previous_questions=previous_questions,
+            selected_question = QuestionBankItem.objects.filter(
+                id=question_bank_id,
+                is_active=True,
+            ).first()
+
+            if selected_question is None:
+                return Response(
+                    {"error": "Question not found or inactive."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            questions = [selected_question.question]
+
+        else:
+            previous_sessions = (
+                InterviewSession.objects.filter(
+                    user=request.user,
+                    role=data["role"],
+                    interview_type=data["interview_type"],
+                    difficulty=data["difficulty"],
+                )
+                .order_by("-created_at")[:20]
             )
-        except QuestionGenerationError as exc:
-            return Response(
-                {"error": str(exc)},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE,
-            )
+
+            previous_questions = [
+                question
+                for previous_session in previous_sessions
+                for question in (previous_session.questions or [])
+            ]
+
+            try:
+                questions = generate_questions(
+                    role=data["role"],
+                    interview_type=data["interview_type"],
+                    difficulty=data["difficulty"],
+                    previous_questions=previous_questions,
+                )
+            except QuestionGenerationError as exc:
+                return Response(
+                    {"error": str(exc)},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
 
         session = serializer.save(
             user=request.user,
@@ -82,6 +117,41 @@ class InterviewSessionView(APIView):
 
         serializer = InterviewSessionSerializer(
             sessions,
+            many=True,
+        )
+
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK,
+        )
+
+
+class QuestionBankView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        questions = QuestionBankItem.objects.filter(
+            is_active=True
+        )
+
+        category = request.query_params.get("category")
+        difficulty = request.query_params.get("difficulty")
+        search = request.query_params.get("search", "").strip()
+
+        if category and category != "All":
+            questions = questions.filter(category=category)
+
+        if difficulty and difficulty != "All":
+            questions = questions.filter(difficulty=difficulty)
+
+        if search:
+            questions = questions.filter(
+                Q(question__icontains=search)
+                | Q(topic__icontains=search)
+            )
+
+        serializer = QuestionBankItemSerializer(
+            questions,
             many=True,
         )
 
@@ -180,6 +250,12 @@ class InterviewAnswerView(APIView):
 
         question = serializer.validated_data["question"]
         answer_text = serializer.validated_data["answer"]
+
+        if question != session.questions[question_number - 1]:
+            return Response(
+                {"error": "Question does not match this session."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             evaluation = evaluate_answer(

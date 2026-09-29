@@ -1,5 +1,14 @@
+
 from django.urls import path
-from .views import ( InterviewSessionView,InterviewSessionDetailView, InterviewAnswerView, InterviewQuestionsView,DashboardView,)
+
+from .views import (
+    InterviewSessionView,
+    InterviewSessionDetailView,
+    InterviewAnswerView,
+    InterviewQuestionsView,
+    DashboardView,
+    QuestionBankView,
+)
 
 urlpatterns = [
     path(
@@ -11,6 +20,11 @@ urlpatterns = [
         "dashboard/",
         DashboardView.as_view(),
         name="dashboard",
+    ),
+    path(
+        "questions/",
+        QuestionBankView.as_view(),
+        name="question-bank",
     ),
     path(
         "<int:session_id>/questions/",

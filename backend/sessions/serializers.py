@@ -1,6 +1,11 @@
 
 from rest_framework import serializers
-from .models import InterviewSession, InterviewAnswer
+from .models import (
+    InterviewSession,
+    InterviewAnswer,
+    QuestionBankItem,
+)
+
 
 class InterviewSessionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -57,5 +62,21 @@ class InterviewAnswerSerializer(serializers.ModelSerializer):
             "improvements",
             "summary",
             "created_at",
-            "duration"
+        ]
+
+
+class QuestionBankItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = QuestionBankItem
+        fields = [
+            "id",
+            "question",
+            "category",
+            "difficulty",
+            "topic",
+            "created_at",
+        ]
+        read_only_fields = [
+            "id",
+            "created_at",
         ]

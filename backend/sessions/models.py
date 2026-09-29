@@ -53,7 +53,10 @@ class InterviewSession(models.Model):
         blank=True,
     )
 
-    duration = models.PositiveIntegerField(null=True, blank=True)
+    duration = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+    )
 
     status = models.CharField(
         max_length=20,
@@ -146,3 +149,47 @@ class InterviewAnswer(models.Model):
 
     def __str__(self):
         return f"Session {self.session_id} · Q{self.question_number}"
+
+
+class QuestionBankItem(models.Model):
+    CATEGORY_CHOICES = [
+        ("Technical", "Technical"),
+        ("Behavioral", "Behavioral"),
+        ("HR", "HR"),
+        ("System Design", "System Design"),
+    ]
+
+    DIFFICULTY_CHOICES = [
+        ("Beginner", "Beginner"),
+        ("Intermediate", "Intermediate"),
+        ("Advanced", "Advanced"),
+    ]
+
+    question = models.TextField()
+
+    category = models.CharField(
+        max_length=30,
+        choices=CATEGORY_CHOICES,
+    )
+
+    difficulty = models.CharField(
+        max_length=20,
+        choices=DIFFICULTY_CHOICES,
+    )
+
+    topic = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+    )
+
+    is_active = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["category", "difficulty", "id"]
+
+    def __str__(self):
+        return f"{self.category} - {self.question[:60]}"
