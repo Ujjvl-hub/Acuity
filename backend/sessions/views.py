@@ -1,5 +1,6 @@
 
 from django.db import IntegrityError, transaction
+from django.db.models import Avg
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -210,10 +211,25 @@ class InterviewAnswerView(APIView):
                 )
 
                 if is_final_question:
+                    average_score = (
+                        InterviewAnswer.objects.filter(
+                            session=session
+                        ).aggregate(
+                            average=Avg("score")
+                        )["average"]
+                    )
+
+                    session.score = (
+                        round(average_score)
+                        if average_score is not None
+                        else None
+                    )
                     session.duration = duration
                     session.status = "Completed"
+
                     session.save(
                         update_fields=[
+                            "score",
                             "duration",
                             "status",
                             "updated_at",
