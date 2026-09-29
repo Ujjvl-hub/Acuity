@@ -1,5 +1,6 @@
+
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Check, ArrowRight } from "lucide-react";
 import useAuth from "../../../hooks/useAuth.js";
 import { createSession } from "../../../api/session.api.js";
@@ -53,13 +54,32 @@ const difficultyMap = {
   Advanced: "Hard",
 };
 
+const categoryToInterviewType = {
+  Technical: "Technical",
+  Behavioral: "Behavioral",
+  HR: "HR",
+  "System Design": "Technical",
+};
+
 export default function CreateSession() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
 
-  const [role, setRole] = useState("");
-  const [interviewType, setInterviewType] = useState("");
-  const [difficulty, setDifficulty] = useState("");
+  const selectedQuestion = location.state?.selectedQuestion;
+
+  const [role, setRole] = useState(() =>
+    location.state?.selectedQuestion ? "Software Engineer" : ""
+  );
+
+  const [interviewType, setInterviewType] = useState(
+    () =>
+      categoryToInterviewType[selectedQuestion?.category] || ""
+  );
+
+  const [difficulty, setDifficulty] = useState(
+    () => selectedQuestion?.difficulty || ""
+  );
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -79,17 +99,14 @@ export default function CreateSession() {
       role,
       difficulty: difficultyMap[difficulty],
       interview_type: interviewType,
+      ...(selectedQuestion && {
+        question_id: selectedQuestion.id,
+      }),
     };
 
     try {
       const response = await createSession(sessionConfig);
-
       const createdSession = response.data.session;
-
-      console.log(
-        "Interview session created:",
-        createdSession
-      );
 
       navigate(`/sessions/${createdSession.id}`, {
         state: {
@@ -101,10 +118,7 @@ export default function CreateSession() {
         },
       });
     } catch (err) {
-      console.error(
-        "Session creation failed:",
-        err
-      );
+      console.error("Session creation failed:", err);
 
       if (err.response?.status === 401) {
         setError(
@@ -140,6 +154,26 @@ export default function CreateSession() {
         </p>
       </section>
 
+      {/* Selected Question */}
+      {selectedQuestion && (
+        <section className="border-b border-hairline py-6">
+          <p className="text-sm font-medium text-focus">
+            Selected question
+          </p>
+          <p className="mt-2 text-base font-semibold text-ink">
+            {selectedQuestion.question}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span className="rounded-[3px] border border-hairline px-2 py-1 text-xs text-slate">
+              {selectedQuestion.category}
+            </span>
+            <span className="rounded-[3px] border border-hairline px-2 py-1 text-xs text-slate">
+              {selectedQuestion.difficulty}
+            </span>
+          </div>
+        </section>
+      )}
+
       {/* Configuration */}
       <div className="space-y-10 py-10">
         {/* Target Role */}
@@ -148,7 +182,6 @@ export default function CreateSession() {
             <span className="font-mono text-sm text-brass">
               01
             </span>
-
             <h2 className="text-xl font-semibold text-ink">
               Target role
             </h2>
@@ -173,15 +206,9 @@ export default function CreateSession() {
                       : "border-hairline bg-paper text-slate hover:border-ink/30"
                   }`}
                 >
-                  <span className="font-medium">
-                    {item}
-                  </span>
-
+                  <span className="font-medium">{item}</span>
                   {selected && (
-                    <Check
-                      size={17}
-                      className="text-focus"
-                    />
+                    <Check size={17} className="text-focus" />
                   )}
                 </button>
               );
@@ -195,29 +222,24 @@ export default function CreateSession() {
             <span className="font-mono text-sm text-brass">
               02
             </span>
-
             <h2 className="text-xl font-semibold text-ink">
               Interview type
             </h2>
           </div>
 
           <p className="mt-2 text-sm text-slate">
-            Choose the kind of interview you want to
-            simulate.
+            Choose the kind of interview you want to simulate.
           </p>
 
           <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
             {interviewTypes.map((item) => {
-              const selected =
-                interviewType === item.name;
+              const selected = interviewType === item.name;
 
               return (
                 <button
                   key={item.name}
                   type="button"
-                  onClick={() =>
-                    setInterviewType(item.name)
-                  }
+                  onClick={() => setInterviewType(item.name)}
                   className={`relative rounded-[4px] border p-5 text-left transition-colors ${
                     selected
                       ? "border-focus bg-focus/5"
@@ -230,11 +252,9 @@ export default function CreateSession() {
                       className="absolute right-4 top-4 text-focus"
                     />
                   )}
-
                   <h3 className="text-sm font-semibold text-ink">
                     {item.name}
                   </h3>
-
                   <p className="mt-2 max-w-xs text-sm leading-relaxed text-slate">
                     {item.description}
                   </p>
@@ -250,7 +270,6 @@ export default function CreateSession() {
             <span className="font-mono text-sm text-brass">
               03
             </span>
-
             <h2 className="text-xl font-semibold text-ink">
               Difficulty
             </h2>
@@ -263,16 +282,13 @@ export default function CreateSession() {
 
           <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
             {difficulties.map((item) => {
-              const selected =
-                difficulty === item.name;
+              const selected = difficulty === item.name;
 
               return (
                 <button
                   key={item.name}
                   type="button"
-                  onClick={() =>
-                    setDifficulty(item.name)
-                  }
+                  onClick={() => setDifficulty(item.name)}
                   className={`relative rounded-[4px] border p-5 text-left transition-colors ${
                     selected
                       ? "border-focus bg-focus/5"
@@ -285,11 +301,9 @@ export default function CreateSession() {
                       className="absolute right-4 top-4 text-focus"
                     />
                   )}
-
                   <h3 className="text-sm font-semibold text-ink">
                     {item.name}
                   </h3>
-
                   <p className="mt-2 text-sm leading-relaxed text-slate">
                     {item.description}
                   </p>
@@ -311,11 +325,9 @@ export default function CreateSession() {
             <span className="rounded-[3px] border border-hairline px-3 py-1.5 text-sm text-ink">
               {role}
             </span>
-
             <span className="rounded-[3px] border border-hairline px-3 py-1.5 text-sm text-ink">
               {interviewType}
             </span>
-
             <span className="rounded-[3px] border border-hairline px-3 py-1.5 text-sm text-ink">
               {difficulty}
             </span>
@@ -336,10 +348,8 @@ export default function CreateSession() {
           <p className="text-sm font-medium text-ink">
             Ready when you are.
           </p>
-
           <p className="mt-1 text-sm text-slate">
-            Select all three options to begin your
-            interview.
+            Select all three options to begin your interview.
           </p>
         </div>
 
@@ -349,10 +359,7 @@ export default function CreateSession() {
           onClick={handleStart}
           className="inline-flex items-center justify-center gap-2 rounded-[4px] bg-focus px-5 py-2.5 text-sm font-semibold text-paper transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {loading
-            ? "Creating session..."
-            : "Start interview"}
-
+          {loading ? "Creating session..." : "Start interview"}
           {!loading && <ArrowRight size={16} />}
         </button>
       </section>
