@@ -133,8 +133,8 @@ function LoginForm() {
       {error && (
         <div
           role="alert"
-          aria-live="polite"
-          className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600"
+          aria-live="assertive"
+          className="rounded-xl border-2 border-red-400 bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
         >
           {error}
         </div>
