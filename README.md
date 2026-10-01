@@ -1,170 +1,625 @@
 # Acuity — AI Interview Platform
 
-Acuity is an AI-powered interview practice platform designed to help candidates prepare for technical and behavioral interviews. It provides a structured interview experience, AI-generated questions, and feedback to help users understand and improve their performance.
+Acuity is a full-stack AI-powered interview preparation platform designed to help candidates practice and improve their performance across **technical, behavioral, HR, and system design interviews**.
 
-> **Note:** Replace the screenshot placeholders below with screenshots from your running application.
+The platform provides structured interview sessions, an AI-powered question generation pipeline, a searchable question bank, performance tracking, interview history, and authentication.
 
 ## Screenshots
 
-Add your screenshots to `docs/screenshots/` using the filenames below, or update the paths to match your files.
+> Replace the screenshot paths below with screenshots from the deployed application.
 
-| Landing Page | Dashboard |
-|---|---|
+| Landing Page                                         | Dashboard                                           |
+| ---------------------------------------------------- | --------------------------------------------------- |
 | ![Acuity landing page](docs/screenshots/landing.png) | ![Acuity dashboard](docs/screenshots/dashboard.png) |
 
-| Interview Session | Interview Results |
-|---|---|
-| ![Interview session](docs/screenshots/interview.png) | ![Interview results](docs/screenshots/results.png) |
+| Question Bank                                               | Interview Session                                           |
+| ----------------------------------------------------------- | ----------------------------------------------------------- |
+| ![Acuity question bank](docs/screenshots/question-bank.png) | ![Acuity interview session](docs/screenshots/interview.png) |
+
+| Interview Results                                         | Interview History                                         |
+| --------------------------------------------------------- | --------------------------------------------------------- |
+| ![Acuity interview results](docs/screenshots/results.png) | ![Acuity interview history](docs/screenshots/history.png) |
+
+---
 
 ## Features
 
-- **AI-powered interviews:** Practice with questions generated for the selected role and interview settings.
-- **Interview evaluation:** Receive structured feedback on technical skills, communication, and problem-solving.
-- **Interview sessions:** Create and complete interview practice sessions.
-- **Dashboard:** Review interview activity and performance information.
-- **Interview history:** Revisit previous sessions and their results.
-- **Question bank:** Access interview questions.
-- **Resume section:** Manage resumes within the application.
-- **Authentication:** Register and sign in to access protected features.
+### 🔐 Authentication
 
-## Tech Stack
+* User registration and login
+* JWT-based authentication
+* Access-token refresh
+* Protected application routes
+* Authenticated API requests
 
-### Frontend
-- React
-- Vite
-- Tailwind CSS
-- React Router
-- Axios
-- TanStack Query
-- Lucide React
+### 🤖 AI-Powered Question Generation
 
-### Backend
-- Python
-- Django
-- Django REST Framework
-- SQLite
-- Simple JWT
+Acuity uses the **Groq API** to generate interview questions dynamically.
 
-### AI
-- Groq API
-- LangChain
+Questions are generated based on:
 
-## Project Structure
+* Category
+
+  * Technical
+  * Behavioral
+  * HR
+  * System Design
+* Difficulty
+
+  * Beginner
+  * Intermediate
+  * Advanced
+* Topic
+
+The generation pipeline includes:
+
+* Topic-specific generation rules
+* Difficulty-specific generation rules
+* Category validation
+* Difficulty validation
+* Topic validation
+* Exact duplicate detection
+* Near-duplicate detection
+
+Generated questions are stored in PostgreSQL and served to the frontend through the Django REST API.
+
+### 📚 Question Bank
+
+The Question Bank provides a centralized collection of interview questions.
+
+Users can:
+
+* Search questions
+* Filter by category
+* Filter by difficulty
+* View question topics
+* Browse paginated results
+* Practice a selected question
+
+Questions are dynamically fetched from the backend rather than being hardcoded in React.
+
+### 🎯 Interview Sessions
+
+* Create interview practice sessions
+* Select interview roles and difficulty
+* Practice questions from the Question Bank
+* Complete interview sessions
+* Submit answers for evaluation
+* View session results
+
+### 📊 Dashboard
+
+The dashboard provides an overview of interview activity and performance, including:
+
+* Total sessions
+* Average performance
+* Best performance
+* Recent interview activity
+* Progress information
+
+### 📝 Interview History
+
+Users can review previously completed interview sessions and their results.
+
+### 📄 Resume Management
+
+Acuity includes a dedicated resume section for managing resumes used during interview preparation.
+
+### 📱 Responsive Interface
+
+The application is designed to provide a consistent experience across desktop and smaller screen sizes.
+
+---
+
+# Architecture
+
+```text
+                         ┌─────────────────────┐
+                         │    React + Vite     │
+                         │      Frontend       │
+                         └──────────┬──────────┘
+                                    │
+                                    │ REST API
+                                    ▼
+                         ┌─────────────────────┐
+                         │ Django REST API     │
+                         │      Backend        │
+                         └──────────┬──────────┘
+                                    │
+                    ┌───────────────┼───────────────┐
+                    │               │               │
+                    ▼               ▼               ▼
+             ┌────────────┐  ┌────────────┐  ┌────────────┐
+             │ PostgreSQL │  │    Groq    │  │    JWT     │
+             │    Neon    │  │    API     │  │    Auth    │
+             └────────────┘  └────────────┘  └────────────┘
+```
+
+## AI Question Generation Flow
+
+```text
+Groq API
+   │
+   ▼
+Django Management Command
+   │
+   ▼
+Generate Question
+   │
+   ├── Category Validation
+   ├── Difficulty Validation
+   ├── Topic Validation
+   ├── Exact Duplicate Check
+   └── Near-Duplicate Check
+   │
+   ▼
+QuestionBankItem
+   │
+   ▼
+Neon PostgreSQL
+   │
+   ▼
+Django REST API
+   │
+   ▼
+React Question Bank
+```
+
+---
+
+# Tech Stack
+
+## Frontend
+
+* React
+* Vite
+* Tailwind CSS
+* React Router
+* Axios
+* TanStack React Query
+* Socket.IO Client
+* Lucide React
+
+## Backend
+
+* Python 3.11
+* Django
+* Django REST Framework
+* Simple JWT
+* Gunicorn
+* uv
+
+## Database
+
+* PostgreSQL
+* Neon
+
+## AI
+
+* Groq API
+* `openai/gpt-oss-20b`
+
+## Deployment
+
+* Render — Frontend
+* Render — Backend
+* Neon — PostgreSQL
+
+---
+
+# Project Structure
 
 ```text
 Acuity/
+│
 ├── backend/
-│   ├── ai/
 │   ├── config/
 │   ├── sessions/
-│   ├── users/
+│   │   ├── management/
+│   │   │   └── commands/
+│   │   │       └── generate_questions.py
+│   │   ├── migrations/
+│   │   ├── models.py
+│   │   ├── serializers.py
+│   │   ├── views.py
+│   │   └── ...
+│   │
 │   ├── manage.py
-│   └── pyproject.toml
+│   ├── pyproject.toml
+│   └── ...
+│
 ├── src/
 │   ├── api/
+│   │   └── axios.js
+│   │
 │   ├── assets/
+│   │
 │   ├── components/
-│   ├── context/
+│   │
 │   ├── features/
+│   │   ├── auth/
+│   │   ├── dashboard/
+│   │   ├── questions/
+│   │   ├── resumes/
+│   │   └── sessions/
+│   │
 │   ├── hooks/
-│   ├── providers/
-│   └── routes/
+│   │
+│   └── ...
+│
+├── docs/
+│   └── screenshots/
+│
 ├── package.json
 └── README.md
 ```
 
-## Getting Started
+---
 
-### Prerequisites
+# Getting Started
 
-- Node.js and npm
-- Python 3.11
-- uv
-- A Groq API key
+## Prerequisites
 
-### 1. Clone the repository
+Make sure you have:
+
+* Node.js
+* npm
+* Python 3.11
+* uv
+* A Groq API key
+* PostgreSQL database for local development
+
+---
+
+## 1. Clone the Repository
 
 ```bash
 git clone https://github.com/Ujjvl-hub/Acuity.git
 cd Acuity
 ```
 
-### 2. Configure the backend
+---
+
+## 2. Backend Setup
+
+Navigate to the backend:
 
 ```bash
 cd backend
+```
+
+Install Python dependencies:
+
+```bash
 uv sync
 ```
 
-Create a `.env` file in the backend directory. Add the environment variables required by your Django settings and AI service. At minimum, configure your Groq API key:
+Create a `.env` file in the backend directory:
 
 ```env
+SECRET_KEY=your_django_secret_key
+DATABASE_URL=your_postgresql_connection_string
 GROQ_API_KEY=your_groq_api_key
 ```
 
-Set any other required Django settings (such as the secret key and allowed hosts) according to your local configuration. Do not commit real secrets.
+Never commit real API keys, passwords, or database credentials.
 
-Apply database migrations and start the backend:
+Run migrations:
 
 ```bash
 uv run python manage.py migrate
+```
+
+Create an admin user:
+
+```bash
+uv run python manage.py createsuperuser
+```
+
+Start the Django development server:
+
+```bash
 uv run python manage.py runserver
 ```
 
-The Django development server typically runs at `http://127.0.0.1:8000`.
+The backend will typically be available at:
 
-### 3. Configure the frontend
+```text
+http://127.0.0.1:8000
+```
 
-Open a second terminal at the repository root:
+---
+
+## 3. Frontend Setup
+
+Open another terminal at the project root:
+
+```bash
+cd Acuity
+```
+
+Install dependencies:
 
 ```bash
 npm install
+```
+
+Create a frontend `.env` file if required:
+
+```env
+VITE_API_BASE_URL=http://127.0.0.1:8000
+```
+
+Start the development server:
+
+```bash
 npm run dev
 ```
 
-Open the local URL printed by Vite in your terminal.
+Open the URL provided by Vite.
 
-> Ensure the frontend API base URL in `src/api/axios.js` points to your local backend while developing locally.
+---
 
-## Running Tests
+# Generate Interview Questions
 
-From the backend directory:
+Acuity includes a Django management command that uses Groq to generate questions.
+
+Generate one question:
+
+```bash
+uv run python manage.py generate_questions
+```
+
+Generate multiple questions:
+
+```bash
+uv run python manage.py generate_questions --count 10
+```
+
+The generator automatically selects an appropriate category, difficulty, and topic.
+
+Before saving a question, the system checks:
+
+```text
+Generated Question
+       │
+       ▼
+Valid Category?
+       │
+       ▼
+Valid Difficulty?
+       │
+       ▼
+Valid Topic?
+       │
+       ▼
+Exact Duplicate?
+       │
+       ▼
+Near Duplicate?
+       │
+       ▼
+Save to PostgreSQL
+```
+
+---
+
+# Question Bank API
+
+The Question Bank is powered by the Django REST API.
+
+Endpoint:
+
+```text
+GET /api/sessions/questions/
+```
+
+Examples:
+
+```text
+/api/sessions/questions/?search=database
+```
+
+```text
+/api/sessions/questions/?category=Technical
+```
+
+```text
+/api/sessions/questions/?difficulty=Beginner
+```
+
+```text
+/api/sessions/questions/?category=Technical&difficulty=Intermediate
+```
+
+The frontend consumes these API responses dynamically.
+
+No interview questions are hardcoded inside the Question Bank UI.
+
+---
+
+# Authentication
+
+Acuity uses JWT authentication through Django REST Framework Simple JWT.
+
+Authentication flow:
+
+```text
+User Login
+    │
+    ▼
+Access Token
+    │
+    ▼
+Authenticated API Requests
+    │
+    ▼
+Token Refresh
+```
+
+Protected endpoints require authentication.
+
+---
+
+# Application Flow
+
+```text
+Login / Register
+       │
+       ▼
+    Dashboard
+       │
+       ├───────────────┐
+       │               │
+       ▼               ▼
+Question Bank      Interview Sessions
+       │               │
+       ▼               ▼
+   Practice         Interview
+       │               │
+       └───────┬───────┘
+               ▼
+            Results
+               │
+               ▼
+            History
+               │
+               ▼
+           Dashboard
+```
+
+---
+
+# Testing
+
+Run Django tests:
 
 ```bash
 uv run python manage.py test
 ```
 
-From the repository root, create a production frontend build:
+Run Django system checks:
+
+```bash
+uv run python manage.py check
+```
+
+Create a production frontend build:
 
 ```bash
 npm run build
 ```
 
-## Screenshots: adding your own
+---
 
-1. Run Acuity locally and open each page you want to capture.
-2. Take screenshots of the landing page, dashboard, interview session, and results page.
-3. Create the folder `docs/screenshots/` in the repository root.
-4. Save the images as `landing.png`, `dashboard.png`, `interview.png`, and `results.png`.
-5. Commit the README and screenshot files together.
+# Deployment
 
-## Future Enhancements
+Acuity is deployed using:
 
-- More detailed interview analytics and progress tracking.
-- Additional interview roles and question categories.
-- Expanded evaluation and feedback options.
-- Deployment and production-readiness improvements.
+```text
+Frontend  → Render
+Backend   → Render
+Database  → Neon PostgreSQL
+AI        → Groq API
+```
 
-## Contributing
+Production architecture:
 
-Contributions, suggestions, and bug reports are welcome. For significant changes, open an issue first to discuss the proposed update.
+```text
+                    Internet
+                       │
+                       ▼
+              Render Frontend
+                 React + Vite
+                       │
+                       │ HTTPS
+                       ▼
+              Render Backend
+               Django REST API
+                 │         │
+                 │         │
+                 ▼         ▼
+          Neon PostgreSQL  Groq
+```
 
-## Author
+Environment variables are configured separately for the deployed frontend and backend.
+
+---
+
+# Environment Variables
+
+## Frontend
+
+```env
+VITE_API_BASE_URL=
+```
+
+## Backend
+
+```env
+SECRET_KEY=
+DATABASE_URL=
+GROQ_API_KEY=
+```
+
+Do not commit `.env` files or expose API credentials in the repository.
+
+---
+
+# Screenshots
+
+To add screenshots to the README:
+
+```text
+docs/
+└── screenshots/
+    ├── landing.png
+    ├── dashboard.png
+    ├── question-bank.png
+    ├── interview.png
+    ├── results.png
+    └── history.png
+```
+
+Capture screenshots from the deployed application and place them in this directory.
+
+---
+
+# Future Improvements
+
+* Voice-based interview practice
+* More advanced AI answer evaluation
+* Resume-based personalized interviews
+* Personalized question recommendations
+* Topic-wise performance analytics
+* Interview progress tracking
+* Improved AI-generated feedback
+* Expanded system design practice
+* Real-time interview capabilities
+* More detailed performance reports
+
+---
+
+# Contributing
+
+Contributions, suggestions, and bug reports are welcome.
+
+For significant changes, open an issue first to discuss the proposed change.
+
+---
+
+# Author
 
 **Ujjwal Kumar**
 
-- GitHub: [@Ujjvl-hub](https://github.com/Ujjvl-hub)
+BTech CSE
 
-## License
+GitHub: [@Ujjvl-hub](https://github.com/Ujjvl-hub)
 
-No license has been specified yet. Add a `LICENSE` file if you intend to publish the project under an open-source license.
+---
+
+# License
+
+No license has currently been specified for this project.
+
+If you intend to publish Acuity as an open-source project, add an appropriate `LICENSE` file.
