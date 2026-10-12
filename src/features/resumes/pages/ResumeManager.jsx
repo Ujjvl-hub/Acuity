@@ -1,3 +1,4 @@
+
 import { useRef, useState } from "react";
 import {
   Upload,
@@ -9,6 +10,7 @@ import {
   RefreshCw,
   Target,
 } from "lucide-react";
+import api from "../../../api/axios";
 
 const targetRoles = [
   "Software Engineer",
@@ -19,17 +21,7 @@ const targetRoles = [
   "DevOps Engineer",
 ];
 
-const initialStrengths = [
-  "Clear technical skills section.",
-  "Relevant programming languages and technologies are listed.",
-  "Projects demonstrate practical development experience.",
-];
-
-const initialImprovements = [
-  "Add more measurable achievements to project descriptions.",
-  "Use stronger action verbs to describe your contributions.",
-  "Optimize keywords based on the target job role.",
-];
+const MAX_RESUME_SIZE = 5 * 1024 * 1024;
 
 function getScoreLabel(score) {
   if (score >= 80) return "Strong";
@@ -55,17 +47,20 @@ export default function ResumeManager() {
   const [resume, setResume] = useState(null);
   const [targetRole, setTargetRole] = useState("");
   const [fileError, setFileError] = useState("");
+  const [analysisError, setAnalysisError] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisComplete, setAnalysisComplete] = useState(false);
-
-  const atsScore = 78;
+  const [analysis, setAnalysis] = useState(null);
 
   const handleFileChange = (event) => {
     const file = event.target.files?.[0];
 
     if (!file) return;
 
-    if (file.type !== "application/pdf") {
+    if (
+      file.type !== "application/pdf" ||
+      !file.name.toLowerCase().endsWith(".pdf")
+    ) {
       setFileError("Please upload a PDF file.");
 
       if (fileInputRef.current) {
@@ -75,14 +70,28 @@ export default function ResumeManager() {
       return;
     }
 
+    if (file.size > MAX_RESUME_SIZE) {
+      setFileError("Resume PDF must be 5 MB or smaller.");
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+
+      return;
+    }
+
     setFileError("");
+    setAnalysisError("");
     setResume(file);
+    setAnalysis(null);
     setAnalysisComplete(false);
   };
 
   const handleRemoveResume = () => {
     setResume(null);
     setFileError("");
+    setAnalysisError("");
+    setAnalysis(null);
     setAnalysisComplete(false);
 
     if (fileInputRef.current) {
@@ -98,34 +107,77 @@ export default function ResumeManager() {
     if (!resume || !targetRole || analyzing) return;
 
     setAnalyzing(true);
+    setAnalysisError("");
+    setAnalysis(null);
     setAnalysisComplete(false);
 
     try {
-      /*
-        Backend integration later:
+      const formData = new FormData();
+      formData.append("resume", resume);
+      formData.append("role", targetRole);
 
-        1. Upload PDF to backend
-        2. Extract resume text
-        3. Send resume + target role to GenAI
-        4. Receive ATS score
-        5. Receive strengths and improvements
-      */
+      const response = await api.post(
+        "/api/ai/resume/analyze/",
+        formData,
+        {
+          // Let the browser set the multipart boundary.
+          headers: {
+            "Content-Type": undefined,
+          },
+        }
+      );
 
-      await new Promise((resolve) => setTimeout(resolve, 1800));
+      const result = response.data;
 
+      if (
+        typeof result?.ats_score !== "number" ||
+        !Array.isArray(result?.strengths) ||
+        !Array.isArray(result?.improvements) ||
+        !Array.isArray(result?.missing_skills) ||
+        typeof result?.summary !== "string" ||
+        typeof result?.role_match !== "string"
+      ) {
+        throw new Error("The server returned an invalid analysis response.");
+      }
+
+      setAnalysis(result);
       setAnalysisComplete(true);
     } catch (error) {
       console.error("Resume analysis failed:", error);
+
+      const status = error.response?.status;
+      const message = error.response?.data?.error;
+
+      if (error.message === "The server returned an invalid analysis response.") {
+        setAnalysisError(error.message);
+      } else if (status === 400) {
+        setAnalysisError(
+          message || "Please check your resume and target role."
+        );
+      } else if (status === 401 || status === 403) {
+        setAnalysisError(
+          "Your session could not be authenticated. Please sign in again."
+        );
+      } else if (status === 503 || !error.response) {
+        setAnalysisError(
+          "The analysis service is temporarily unavailable. Please try again."
+        );
+      } else {
+        setAnalysisError(
+          message || "Something went wrong while analyzing your resume."
+        );
+      }
     } finally {
       setAnalyzing(false);
     }
   };
 
+  const atsScore = analysis?.ats_score ?? 0;
   const scoreLabel = getScoreLabel(atsScore);
   const scoreColor = getScoreColor(atsScore);
   const scoreBarColor = getScoreBarColor(atsScore);
 
-  const canAnalyze = resume && targetRole && !analyzing;
+  const canAnalyze = Boolean(resume && targetRole && !analyzing);
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -146,9 +198,7 @@ export default function ResumeManager() {
       {/* Upload */}
       <section className="py-10">
         <div>
-          <p className="text-sm font-medium text-ink">
-            Resume document
-          </p>
+          <p className="text-sm font-medium text-ink">Resume document</p>
 
           <p className="mt-1 text-sm text-slate">
             Upload your latest resume in PDF format.
@@ -170,7 +220,7 @@ export default function ResumeManager() {
             </p>
 
             <p className="mt-2 text-sm text-slate">
-              PDF files only
+              PDF files only · Maximum 5 MB
             </p>
 
             <span className="mt-5 rounded-[4px] bg-focus px-4 py-2 text-sm font-semibold text-paper">
@@ -218,9 +268,21 @@ export default function ResumeManager() {
         )}
 
         {fileError && (
-          <p className="mt-3 rounded-[4px] border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">
+          <p
+            role="alert"
+            className="mt-3 rounded-[4px] border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600"
+          >
             {fileError}
           </p>
+        )}
+
+        {analysisError && (
+          <div
+            role="alert"
+            className="mt-3 rounded-[4px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600"
+          >
+            {analysisError}
+          </div>
         )}
 
         <input
@@ -236,9 +298,7 @@ export default function ResumeManager() {
           <div className="flex items-center gap-2">
             <Target size={17} className="text-focus" />
 
-            <p className="text-sm font-medium text-ink">
-              Target role
-            </p>
+            <p className="text-sm font-medium text-ink">Target role</p>
           </div>
 
           <p className="mt-2 text-sm text-slate">
@@ -250,13 +310,13 @@ export default function ResumeManager() {
               value={targetRole}
               onChange={(event) => {
                 setTargetRole(event.target.value);
+                setAnalysis(null);
+                setAnalysisError("");
                 setAnalysisComplete(false);
               }}
               className="w-full rounded-[4px] border border-hairline bg-paper px-4 py-3 text-sm text-ink outline-none transition-colors focus:border-focus focus:ring-2 focus:ring-focus/10"
             >
-              <option value="">
-                Select your target role
-              </option>
+              <option value="">Select your target role</option>
 
               {targetRoles.map((role) => (
                 <option key={role} value={role}>
@@ -286,20 +346,35 @@ export default function ResumeManager() {
               disabled={!canAnalyze}
               className="inline-flex items-center justify-center gap-2 rounded-[4px] bg-focus px-5 py-2.5 text-sm font-semibold text-paper transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {analyzing && (
-                <Loader2 size={16} className="animate-spin" />
-              )}
+              {analyzing && <Loader2 size={16} className="animate-spin" />}
 
-              {analyzing
-                ? "Analyzing..."
-                : "Analyze resume"}
+              {analyzing ? "Analyzing..." : "Analyze resume"}
             </button>
+          </div>
+        )}
+
+        {analyzing && (
+          <div
+            role="status"
+            className="mt-5 flex items-center gap-3 border border-hairline p-4"
+          >
+            <Loader2 size={18} className="animate-spin text-focus" />
+
+            <div>
+              <p className="text-sm font-medium text-ink">
+                Analyzing your resume
+              </p>
+              <p className="mt-1 text-xs text-slate">
+                Extracting resume details and evaluating role relevance.
+                This may take a little while.
+              </p>
+            </div>
           </div>
         )}
       </section>
 
       {/* Analysis Results */}
-      {analysisComplete && (
+      {analysisComplete && analysis && (
         <>
           {/* Analysis status */}
           <section className="border-t border-hairline py-5">
@@ -308,10 +383,7 @@ export default function ResumeManager() {
 
               <p className="text-sm text-slate">
                 Analysis complete for{" "}
-                <span className="font-medium text-ink">
-                  {targetRole}
-                </span>
-                .
+                <span className="font-medium text-ink">{targetRole}</span>.
               </p>
             </div>
           </section>
@@ -319,9 +391,7 @@ export default function ResumeManager() {
           {/* Score */}
           <section className="grid border-y border-hairline py-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
             <div>
-              <p className="text-sm text-slate">
-                Resume score
-              </p>
+              <p className="text-sm text-slate">Resume score</p>
 
               <div className="mt-5 flex items-end gap-2">
                 <span
@@ -340,9 +410,12 @@ export default function ResumeManager() {
               </p>
 
               <p className="mt-4 max-w-sm text-sm leading-relaxed text-slate">
-                Your resume has a strong foundation. Improving keyword
-                relevance and measurable achievements could increase its
-                effectiveness.
+                {analysis.summary}
+              </p>
+
+              <p className="mt-3 text-xs leading-relaxed text-slate">
+                This is an AI-generated estimate of resume relevance, not an
+                official score from an employer's applicant tracking system.
               </p>
             </div>
 
@@ -354,16 +427,21 @@ export default function ResumeManager() {
 
               <div className="mt-6">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate">
-                    ATS readiness
-                  </span>
+                  <span className="text-slate">Resume relevance</span>
 
                   <span className={`font-mono font-medium ${scoreColor}`}>
                     {atsScore}%
                   </span>
                 </div>
 
-                <div className="mt-3 h-[4px] w-full overflow-hidden bg-hairline">
+                <div
+                  className="mt-3 h-[4px] w-full overflow-hidden bg-hairline"
+                  role="progressbar"
+                  aria-label="Resume relevance score"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={atsScore}
+                >
                   <div
                     className={`h-full transition-all duration-500 ${scoreBarColor}`}
                     style={{ width: `${atsScore}%` }}
@@ -381,14 +459,10 @@ export default function ResumeManager() {
 
           {/* Feedback */}
           <section className="grid gap-10 border-b border-hairline py-10 lg:grid-cols-2">
-
             {/* Strengths */}
             <div>
               <div className="flex items-center gap-2">
-                <CheckCircle2
-                  size={18}
-                  className="text-focus"
-                />
+                <CheckCircle2 size={18} className="text-focus" />
 
                 <h2 className="text-xl font-semibold text-ink">
                   What's working
@@ -396,8 +470,8 @@ export default function ResumeManager() {
               </div>
 
               <div className="mt-6 space-y-4">
-                {initialStrengths.map((item) => (
-                  <div key={item} className="flex gap-3">
+                {analysis.strengths.map((item, index) => (
+                  <div key={`${index}-${item}`} className="flex gap-3">
                     <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-focus" />
 
                     <p className="text-sm leading-relaxed text-slate">
@@ -411,10 +485,7 @@ export default function ResumeManager() {
             {/* Improvements */}
             <div>
               <div className="flex items-center gap-2">
-                <AlertCircle
-                  size={18}
-                  className="text-brass"
-                />
+                <AlertCircle size={18} className="text-brass" />
 
                 <h2 className="text-xl font-semibold text-ink">
                   Opportunities to improve
@@ -422,8 +493,8 @@ export default function ResumeManager() {
               </div>
 
               <div className="mt-6 space-y-4">
-                {initialImprovements.map((item) => (
-                  <div key={item} className="flex gap-3">
+                {analysis.improvements.map((item, index) => (
+                  <div key={`${index}-${item}`} className="flex gap-3">
                     <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brass" />
 
                     <p className="text-sm leading-relaxed text-slate">
@@ -435,42 +506,69 @@ export default function ResumeManager() {
             </div>
           </section>
 
-          {/* Acuity Insight */}
+          {/* Role match */}
           <section className="border-b border-hairline py-10">
             <div className="rounded-[4px] border border-focus/20 bg-focus/5 p-6">
               <div className="flex items-center gap-3">
-                <div className="h-2 w-2 rounded-full bg-focus" />
+                <Target size={18} className="text-focus" />
 
-                <p className="text-sm font-semibold text-ink">
-                  Acuity insight
-                </p>
+                <h2 className="text-sm font-semibold text-ink">
+                  Role match: {targetRole}
+                </h2>
               </div>
 
               <p className="mt-4 max-w-3xl text-sm leading-relaxed text-slate">
-                Your technical profile is clear, but your projects can make a
-                stronger impact by highlighting measurable results. Instead of
-                only listing technologies, explain what you built, the problem
-                you solved, and the outcome.
+                {analysis.role_match}
               </p>
             </div>
+          </section>
+
+          {/* Missing skills */}
+          <section className="border-b border-hairline py-10">
+            <h2 className="text-xl font-semibold text-ink">
+              Skills to consider
+            </h2>
+
+            <p className="mt-2 text-sm leading-relaxed text-slate">
+              These relevant skills were not clearly demonstrated in your
+              resume. Review them against the requirements of your target role.
+            </p>
+
+            {analysis.missing_skills.length > 0 ? (
+              <ul className="mt-5 space-y-3">
+                {analysis.missing_skills.map((skill, index) => (
+                  <li
+                    key={`${index}-${skill}`}
+                    className="flex gap-3"
+                  >
+                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brass" />
+
+                    <span className="text-sm leading-relaxed text-slate">
+                      {skill}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-5 text-sm text-focus">
+                No specific skill gaps were identified by the analysis.
+              </p>
+            )}
           </section>
 
           {/* Next Step */}
           <section className="py-10">
             <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-
               <div>
-                <p className="text-sm text-slate">
-                  Recommended next step
-                </p>
+                <p className="text-sm text-slate">Recommended next step</p>
 
                 <h2 className="mt-1 text-xl font-semibold text-ink">
-                  Improve project descriptions.
+                  Start with your highest-impact improvement.
                 </h2>
 
                 <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate">
-                  Focus on measurable impact, strong action verbs, and
-                  technologies relevant to your target role.
+                  {analysis.improvements[0] ||
+                    "Review your resume against the requirements of your target role."}
                 </p>
               </div>
 
@@ -480,10 +578,12 @@ export default function ResumeManager() {
                 disabled={analyzing}
                 className="inline-flex shrink-0 items-center justify-center gap-2 rounded-[4px] border border-hairline px-4 py-2.5 text-sm font-semibold text-ink transition-colors hover:border-ink disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <RefreshCw size={16} />
+                <RefreshCw
+                  size={16}
+                  className={analyzing ? "animate-spin" : ""}
+                />
                 Analyze again
               </button>
-
             </div>
           </section>
         </>

@@ -1,3 +1,4 @@
+
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -13,6 +14,11 @@ urlpatterns = [
     path(
         "api/sessions/",
         include("sessions.urls"),
+    ),
+
+    path(
+        "api/ai/",
+        include("ai.urls"),
     ),
 
     path(

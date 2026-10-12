@@ -44,3 +44,39 @@ class AnswerEvaluation(BaseModel):
         default="",
         description="One or two sentence overall takeaway about this answer.",
     )
+
+
+class ResumeAnalysis(BaseModel):
+    ats_score: int = Field(
+        ge=0,
+        le=100,
+        description="Resume relevance score for the selected target role, from 0 to 100.",
+    )
+
+    summary: str = Field(
+        min_length=1,
+        description="A concise overall assessment of the resume.",
+    )
+
+    strengths: List[str] = Field(
+        min_length=1,
+        max_length=6,
+        description="Specific strengths supported by the resume.",
+    )
+
+    improvements: List[str] = Field(
+        min_length=1,
+        max_length=6,
+        description="Concrete, actionable improvements for the resume.",
+    )
+
+    missing_skills: List[str] = Field(
+        default_factory=list,
+        max_length=10,
+        description="Relevant skills not demonstrated by the resume.",
+    )
+
+    role_match: str = Field(
+        min_length=1,
+        description="Explanation of how the resume aligns with the selected target role.",
+    )
